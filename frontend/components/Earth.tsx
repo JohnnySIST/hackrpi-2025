@@ -3,9 +3,11 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { addHeatSpheres } from "./globePoints";
 
-export default function Earth() {
+export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31" }: { startDate?: string; endDate?: string }) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -19,6 +21,7 @@ export default function Earth() {
 
       // Scene & Camera
       const scene = new THREE.Scene();
+      sceneRef.current = scene;
       const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
       camera.position.set(0, 0, 3);
 
@@ -55,7 +58,7 @@ export default function Earth() {
         map: dayMap,
         normalMap: normalMap,
         displacementMap: heightMap,
-        displacementScale: 0.05,
+        displacementScale: 0.03,
         metalness: 0.05,
         roughness: 0.95,
       });
@@ -118,8 +121,42 @@ export default function Earth() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (renderer) renderer.dispose();
       if (mountRef.current) mountRef.current.innerHTML = "";
+      sceneRef.current = null;
     };
   }, []);
+
+  // Fetch and draw points when date changes
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    // Remove previous heat points only (keep earth and universe)
+    const children = sceneRef.current.children;
+    // Assume earth is first, universe is second, lights/ambient after
+    // Remove all meshes that are not the earth or universe
+    for (let i = children.length - 1; i >= 0; i--) {
+      const obj = children[i];
+      // Keep earth (SphereGeometry) and universe (SphereGeometry with large radius)
+      if (
+        obj instanceof THREE.Mesh &&
+        obj.geometry instanceof THREE.SphereGeometry &&
+        ((obj.geometry.parameters.radius === 1) || (obj.geometry.parameters.radius === 50))
+      ) {
+        continue;
+      }
+      // Keep lights and ambient
+      if (
+        obj instanceof THREE.Light ||
+        obj instanceof THREE.AmbientLight
+      ) {
+        continue;
+      }
+      sceneRef.current.remove(obj);
+    }
+    fetch(`http://localhost:8000/birdcollision?start=${startDate}&end=${endDate}&grid=1`)
+      .then((res) => res.json())
+      .then((data) => {
+        addHeatSpheres(sceneRef.current!, data.points, 1);
+      });
+  }, [startDate, endDate]);
 
   return <div ref={mountRef} className="w-screen h-screen" />;
 }

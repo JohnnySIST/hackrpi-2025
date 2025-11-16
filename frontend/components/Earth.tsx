@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Slider from '@mui/material/Slider';
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { addHeatSpheres } from "./globePoints";
 
 export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31", mode = "day" }: { startDate?: string; endDate?: string; mode?: 'day' | 'night' }) {
+      const [grid, setGrid] = useState<number>(1);
+      const [gridPreview, setGridPreview] = useState<number>(1);
+      useEffect(() => {
+        setGridPreview(grid);
+      }, [grid]);
+      const datasets = [
+        { key: 'birdcollision', label: 'Bird Collision' },
+        { key: 'caterpillar', label: 'Caterpillar' },
+        { key: 'spider', label: 'Spider' },
+      ];
+      const [dataset, setDataset] = useState<'birdcollision' | 'caterpillar' | 'spider'>('birdcollision');
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
@@ -192,12 +204,65 @@ export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31"
       }
       sceneRef.current.remove(obj);
     }
-    fetch(`http://localhost:8000/birdcollision?start=${startDate}&end=${endDate}&grid=1`)
+    fetch(`http://localhost:8000/${dataset}?start=${startDate}&end=${endDate}&grid=${grid}`)
       .then((res) => res.json())
       .then((data) => {
-        addHeatSpheres(sceneRef.current!, data.points, 1);
+        addHeatSpheres(sceneRef.current!, data.points, 1, grid);
       });
-  }, [startDate, endDate]);
+  }, [startDate, endDate, dataset, grid]);
 
-  return <div ref={mountRef} className="w-screen h-screen" />;
+  return (
+    <div className="w-screen h-screen relative" ref={mountRef}>
+      <div style={{ position: 'absolute', right: 20, top: 20, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 12 }}>
+          {datasets.map(ds => (
+            <button
+              key={ds.key}
+              style={{
+                padding: '8px 20px',
+                background: dataset === ds.key ? '#d97706' : '#222',
+                color: dataset === ds.key ? '#fff' : '#ccc',
+                borderRadius: 8,
+                border: 'none',
+                fontWeight: 600,
+                boxShadow: '0 2px 8px #0002',
+                cursor: 'pointer',
+                opacity: dataset === ds.key ? 1 : 0.7,
+                transition: 'background 0.2s,color 0.2s',
+              }}
+              onClick={() => setDataset(ds.key as typeof dataset)}
+            >
+              {ds.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ width: 280, marginTop: 8, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, whiteSpace: 'nowrap', transform: 'translateX(-20px)' }}>
+          <span style={{ color: '#d97706', fontWeight: 700, fontSize: 18, minWidth: 80 }}>Grid Size</span>
+          <Slider
+            value={gridPreview}
+            min={1}
+            max={5}
+            step={1}
+            onChange={(_, val) => setGridPreview(val as number)}
+            onChangeCommitted={(_, val) => setGrid(val as number)}
+            valueLabelDisplay="off"
+            sx={{
+              width: '100%',
+              height: 6,
+              background: 'transparent',
+              color: '#d97706',
+              '& .MuiSlider-markLabel': { fontWeight: 700, fontSize: 18, color: '#d97706' },
+              '& .MuiSlider-thumb': { backgroundColor: '#d97706' },
+              '& .MuiSlider-track': { backgroundColor: '#d97706' },
+              '& .MuiSlider-rail': { backgroundColor: '#ffe0b2' },
+            }}
+            marks={Array.from({length: 5}, (_, i) => ({
+              value: i + 1,
+              label: `${i + 1}`
+            }))}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -20,6 +20,7 @@ export type HeatPoint = {
   lat: number;
   lon: number;
   count: number;
+  grid?: number;
 };
 
 export function computeHeatColor(t: number): THREE.Color {
@@ -48,7 +49,8 @@ export function computeHeatColor(t: number): THREE.Color {
 export function addHeatSpheres(
   scene: THREE.Scene,
   points: HeatPoint[],
-  earthRadius: number
+  earthRadius: number,
+  grid?: number
 ) {
   if (!points || points.length === 0) return;
 
@@ -70,7 +72,7 @@ export function addHeatSpheres(
   const maxProportion = 100 / filteredPoints.length;
 
   filteredPoints.forEach((pt) => {
-    const size = 0.018;
+    const size = 0.018 * (grid ? grid : 1);
 
     // t is the proportion of this point's count to the total, normalized by maxProportion
     const t = (pt.count / totalCount) / maxProportion;

@@ -13,7 +13,7 @@ export default function GlobeWebGPUPage() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <div style={{ position: 'absolute', top: 24, right: 32, zIndex: 100 }}>
+      <div style={{ position: 'absolute', top: 144, right: 32, zIndex: 100 }}>
         <label
           style={{
             display: 'flex',

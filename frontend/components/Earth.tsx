@@ -5,9 +5,14 @@ import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { addHeatSpheres } from "./globePoints";
 
-export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31" }: { startDate?: string; endDate?: string }) {
+export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31", mode = "day" }: { startDate?: string; endDate?: string; mode?: 'day' | 'night' }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const dayMapRef = useRef<THREE.Texture | null>(null);
+  const nightMapRef = useRef<THREE.Texture | null>(null);
+  const ambientRef = useRef<THREE.AmbientLight | null>(null);
+  const pointLightsRef = useRef<THREE.PointLight[]>([]);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -50,24 +55,30 @@ export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31"
       // Load Textures
       const loader = new THREE.TextureLoader();
       const dayMap = loader.load("/textures/8k_earth_daymap.jpg");
+      const nightMap = loader.load("/textures/8k_earth_nightmap.jpg");
+      dayMapRef.current = dayMap;
+      nightMapRef.current = nightMap;
       const normalMap = loader.load("/textures/8k_earth_normal_map.tif");
       const heightMap = loader.load("/textures/height_map.png");
 
       // Earth Material
-      const earthMaterial = new THREE.MeshStandardMaterial({
-        map: dayMap,
-        normalMap: normalMap,
-        displacementMap: heightMap,
-        displacementScale: 0.03,
-        metalness: 0.05,
-        roughness: 0.95,
-      });
+      const earthMaterial = mode === 'night'
+        ? new THREE.MeshBasicMaterial({ map: nightMap })
+        : new THREE.MeshStandardMaterial({
+            map: dayMap,
+            normalMap,
+            displacementMap: heightMap,
+            displacementScale: 0.03,
+            metalness: 0.05,
+            roughness: 0.95,
+          });
 
       // Earth Mesh
       const earth = new THREE.Mesh(
         new THREE.SphereGeometry(1, 512, 512),
         earthMaterial
       );
+      earthMeshRef.current = earth;
       scene.add(earth);
 
       // Background Universe Sphere
@@ -80,19 +91,26 @@ export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31"
       scene.add(universe);
 
       // Lighting
-      const lightA = new THREE.PointLight(0xffffff, 1, 20, 0.5);
-      lightA.position.set(5, 3, 5);
-      scene.add(lightA);
-      const lightB = new THREE.PointLight(0xffffff, 1, 20, 0.5);
-      lightB.position.set(-5, -3, 5);
-      scene.add(lightB);
-      const lightC = new THREE.PointLight(0xffffff, 1, 20, 0.5);
-      lightC.position.set(5, -3, -5);
-      scene.add(lightC);
-      const lightD = new THREE.PointLight(0xffffff, 1, 20, 0.5);
-      lightD.position.set(-5, 3, -5);
-      scene.add(lightD);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+      if (mode === 'night') {
+        ambientRef.current = null;
+        pointLightsRef.current = [];
+      } else {
+        const lights = [
+          [5, 3, 5],
+          [-5, -3, 5],
+          [5, -3, -5],
+          [-5, 3, -5],
+        ].map(pos => {
+          const light = new THREE.PointLight(0xffffff, 1, 20, 0.5);
+          light.position.set(pos[0], pos[1], pos[2]);
+          scene.add(light);
+          return light;
+        });
+        pointLightsRef.current = lights;
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        ambientRef.current = ambient;
+        scene.add(ambient);
+      }
 
       // Animation Loop
       const animate = () => {
@@ -122,8 +140,31 @@ export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31"
       if (renderer) renderer.dispose();
       if (mountRef.current) mountRef.current.innerHTML = "";
       sceneRef.current = null;
+      earthMeshRef.current = null;
     };
   }, []);
+
+  // Update earth texture and ambient when mode changes
+  useEffect(() => {
+    if (!earthMeshRef.current || !dayMapRef.current || !nightMapRef.current) return;
+    earthMeshRef.current.material = mode === 'night'
+      ? new THREE.MeshBasicMaterial({ map: nightMapRef.current })
+      : new THREE.MeshStandardMaterial({
+          map: dayMapRef.current,
+          normalMap: null,
+          displacementMap: null,
+          displacementScale: 0.03,
+          metalness: 0.05,
+          roughness: 0.95,
+        });
+    (earthMeshRef.current.material as any).needsUpdate = true;
+    if (ambientRef.current) ambientRef.current.intensity = mode === 'night' ? 0 : 0.5;
+    if (pointLightsRef.current && pointLightsRef.current.length) {
+      for (const light of pointLightsRef.current) {
+        light.intensity = mode === 'night' ? 0 : 1;
+      }
+    }
+  }, [mode]);
 
   // Fetch and draw points when date changes
   useEffect(() => {

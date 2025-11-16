@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bird Collision Visualization",
-  description: "A modern web application for simulating and visualizing bird flock collisions. Explore group dynamics, collision events, and ecological impact interactively.",
+  title: "EarthScope",
+  description: "Explore the relationship between human civilization and the natural environment with interactive 3D Earth visualizations.",
 };
 
 export default function RootLayout({

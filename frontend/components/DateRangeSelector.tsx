@@ -6,12 +6,10 @@ export interface DateRangeSelectorProps {
 }
 
 export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ onChange }) => {
-    // 移动选区整体一年
     function moveRange(offset: number) {
       let [start, end] = range;
       const newStart = Math.max(0, Math.min(start + offset, totalMonths - 1));
       const newEnd = Math.max(0, Math.min(end + offset, totalMonths - 1));
-      // 保证区间长度不变，且不越界
       if (newEnd - newStart !== end - start) return;
       setRange([newStart, newEnd]);
       triggerChange(newStart, newEnd);

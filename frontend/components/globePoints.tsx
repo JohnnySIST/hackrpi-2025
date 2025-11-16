@@ -72,7 +72,7 @@ export function addHeatSpheres(
   const maxProportion = 100 / filteredPoints.length;
 
   filteredPoints.forEach((pt) => {
-    const size = 0.018 * (grid ? grid : 1);
+    const size = 0.014 * (grid ? grid : 1) * 0.4;
 
     // t is the proportion of this point's count to the total, normalized by maxProportion
     const t = (pt.count / totalCount) / maxProportion;
@@ -82,7 +82,7 @@ export function addHeatSpheres(
       color,
       emissive: color.clone().multiplyScalar(0.3),
       transparent: true,
-      opacity: 0.4, // 40% opacity
+      opacity: 0.6, // 60% opacity
       depthWrite: false,
     });
     const mesh = new THREE.Mesh(baseGeo, mat);

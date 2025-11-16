@@ -204,7 +204,7 @@ export default function Earth({ startDate = "2021-01-01", endDate = "2021-12-31"
       }
       sceneRef.current.remove(obj);
     }
-    fetch(`http://localhost:8000/${dataset}?start=${startDate}&end=${endDate}&grid=${grid}`)
+    fetch(`http://localhost:8000/${dataset}?start=${startDate}&end=${endDate}&grid=${grid*0.4}`)
       .then((res) => res.json())
       .then((data) => {
         addHeatSpheres(sceneRef.current!, data.points, 1, grid);
